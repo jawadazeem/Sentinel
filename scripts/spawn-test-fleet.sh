@@ -162,10 +162,10 @@ ensure_images() {
 
 cmd_build() {
     log "Building node image..."
-    docker build -t "$NODE_IMAGE" -f "$PROJECT_ROOT/node.Dockerfile" "$PROJECT_ROOT"
+    docker build -t "$NODE_IMAGE" -f "$PROJECT_ROOT/avisos-node-service/node.Dockerfile" "$PROJECT_ROOT"
 
     log "Building simulator image..."
-    docker build -t "$SIM_IMAGE" -f "$PROJECT_ROOT/hardware-simulator.Dockerfile" "$PROJECT_ROOT/avisos-hardware-simulator"
+    docker build -t "$SIM_IMAGE" -f "$PROJECT_ROOT/avisos-hardware-simulator/hardware-simulator.Dockerfile" "$PROJECT_ROOT/avisos-hardware-simulator"
 
     log "Images built."
 }
