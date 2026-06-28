@@ -4,7 +4,7 @@
 **Author:** Jawad Azeem
 **Live:** [avisos.jawadazeem.com](https://avisos.jawadazeem.com)
 
-AVISOS is a SCADA orchestration platform that secures and monitors high-reliability environments using computer vision AI for real-time threat detection. Edge nodes publish telemetry over MQTT, the central controller evaluates frames through a vision AI pipeline, and operators interact through a React web dashboard with live WebSocket updates and an embedded CLI terminal.
+AVISOS is a SCADA orchestration platform that secures and monitors high-reliability environments using computer vision AI for real-time threat detection. Edge nodes publish telemetry over MQTT, the central controller evaluates frames through a vision AI pipeline, and a Python-based machine learning service continually monitors fleet-wide metrics for behavioral anomalies. Operators interact through a React web dashboard with live WebSocket updates and an embedded CLI terminal.
 
 ### Architecture
 
@@ -17,9 +17,10 @@ AVISOS is a SCADA orchestration platform that secures and monitors high-reliabil
 | Backend | Java 25 (preview), Spring Boot 3.4.1, Virtual Threads |
 | Frontend | React 19, TypeScript, Vite, xterm.js |
 | AI / RAG | Ollama (llama3.2 + nomic-embed-text), Spring AI, pgvector |
+| Fleet ML | Python 3, FastAPI, scikit-learn (Isolation Forest), Pydantic |
 | Messaging | Eclipse Mosquitto (MQTT), Protobuf telemetry |
 | Real-time | STOMP over WebSocket (SockJS) |
-| Database | SQLite (JDBI) + PostgreSQL (pgvector) |
+| Database | SQLite (JDBI) + PostgreSQL (pgvector, anomaly data) |
 | Vision AI | CodeProject.AI object detection |
 | Hardware Simulation | C++17, CMake, cpp-httplib, nlohmann/json |
 | Cloud | AWS S3 + SNS via LocalStack |
@@ -31,11 +32,12 @@ AVISOS is a SCADA orchestration platform that secures and monitors high-reliabil
 ### Module Structure
 
 ```
-avisos-common-lib/          Protobuf definitions + generated code (telemetry.proto)
-avisos-controller-service/  Central orchestration: REST API, dashboard, alarms, vision, CLI
-avisos-node-service/        Lightweight datacenter sensor node: heartbeat, battery, telemetry
-avisos-hardware-simulator/  C++ hardware simulator: REST readings for node-service polling
-avisos-knowledge/           Datacenter runbooks and facility docs for future RAG enrichment
+avisos-common-lib/                      Protobuf definitions + generated code (telemetry.proto)
+avisos-controller-service/              Central orchestration: REST API, dashboard, alarms, vision, CLI
+avisos-fleet-anomaly-detection-service/ Python/FastAPI service using scikit-learn for fleet anomaly detection
+avisos-node-service/                    Lightweight datacenter sensor node: heartbeat, battery, telemetry
+avisos-hardware-simulator/              C++ hardware simulator: REST readings for node-service polling
+avisos-knowledge/                       Datacenter runbooks and facility docs for future RAG enrichment
 mosquitto/                  MQTT broker configuration (Eclipse Mosquitto)
 ```
 
@@ -80,6 +82,8 @@ The C++ hardware simulator runs as a standalone REST process and exposes hardwar
 | `POST /api/rag/load` | Manually re-ingest knowledge base into vector store |
 | `GET /api/health` | System health report |
 | `GET /api/system/stats` | JVM runtime statistics |
+| `GET /api/fleet-metrics/anomaly-report/latest` | Latest fleet anomaly report (from Python ML service) |
+| `GET /api/fleet-metrics/metrics/latest` | Latest raw fleet metrics (from Python ML service) |
 | `WS /ws` | STOMP WebSocket (topics: `/topic/nodes`, `/topic/alarms`, `/topic/vision`, `/topic/alarm`, `/topic/cli`) |
 
 ### Roadmap

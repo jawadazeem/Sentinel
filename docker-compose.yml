@@ -2,7 +2,7 @@ services:
     controller:
         build:
             context: .
-            dockerfile: controller.Dockerfile
+            dockerfile: avisos-controller-service/controller.Dockerfile
         image: avisos-controller:latest
         container_name: avisos-controller
         networks:

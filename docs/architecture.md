@@ -24,7 +24,7 @@ This document is a developer-oriented walkthrough of how the system works end-to
 
 ## System Overview
 
-AVISOS is a monorepo containing two Java microservices, a C++ hardware simulator, and an AI knowledge base. Nodes publish telemetry over MQTT, the controller evaluates camera frames through a vision AI pipeline, and an on-prem LLM generates incident analysis using RAG over facility documentation.
+AVISOS is a monorepo containing two Java microservices, a Python machine learning service, a C++ hardware simulator, and an AI knowledge base. Nodes publish telemetry over MQTT, the controller evaluates camera frames through a vision AI pipeline, a Python anomaly detection service monitors fleet-wide metrics using scikit-learn (Isolation Forest), and an on-prem LLM generates incident analysis using RAG over facility documentation.
 
 ```
                             ┌──────────────────────────┐
@@ -50,20 +50,24 @@ AVISOS is a monorepo containing two Java microservices, a C++ hardware simulator
                                          │           ▼             ▼      ▼    │
                                          │     S3 storage    LLM analyst  Web  │
                                          │     (async)       (async RAG)  WS   │
-                                         └───┬────┬────┬────┬────┬────┬────────┘
-                                             │    │    │    │    │    │
-                                 ┌───────────┘    │    │    │    │    └──────────┐
-                                 ▼                ▼    │    ▼    ▼              ▼
-                           ┌──────────┐  ┌──────────┐ │ ┌────────┐  ┌──────────────┐
-                           │  SQLite  │  │ pgvector │ │ │ Ollama │  │ CodeProject  │
-                           │(JDBI)     │ │(vectors) │ │ │ (LLM)  │  │   .AI        │
-                           └──────────┘  └──────────┘ │ └────────┘  │ Vision API   │
-                                                      │             └──────────────┘
-                                                      ▼
-                                                ┌──────────┐
-                                                │    S3    │
-                                                │(LocalStack)│
-                                                └──────────┘
+                                         │                                     │
+                                         │       ┌───────────────────────┐     │
+                                         │       │ FleetMetricScheduler  │──┐  │
+                                         │       └───────────────────────┘  │  │
+                                         └───┬────┬────┬────┬────┬────┬─────┼──┘
+                                             │    │    │    │    │    │     │
+                                 ┌───────────┘    │    │    │    │    │     ▼
+                                 ▼                ▼    │    ▼    ▼    │  ┌──────────────┐
+                           ┌──────────┐  ┌──────────┐ │ ┌────────┐  │ │  │ Python ML    │
+                           │  SQLite  │  │ pgvector │ │ │ Ollama │  │ │  │ Service      │
+                           │(JDBI)     │ │(vectors) │ │ │ (LLM)  │  │ │  │ (FastAPI)    │
+                           └──────────┘  └──────────┘ │ └────────┘  │ │  └──────┬───────┘
+                                                      │             │ │         │
+                                                      ▼             ▼ │         ▼
+                                                ┌──────────┐  ┌───────┴──────┐┌──────────┐
+                                                │    S3    │  │ CodeProject  ││ Postgres │
+                                                │(LocalStack)││   .AI        ││ (ML Data)│
+                                                └──────────┘  └──────────────┘└──────────┘
 ```
 
 One controller instance manages many node instances. Each node represents a physical data acquisition device deployed in the field. The hardware simulator runs alongside each node to provide realistic sensor readings and camera frames.
@@ -129,6 +133,16 @@ Responsibilities:
 - **CLI** — optional JLine-based REPL (disabled by default in web/Docker mode), also accessible via the WebSocket CLI bridge.
 - **Health monitoring** — periodic database connectivity and disk space checks.
 - **Persistence** — dual-database architecture: SQLite (JDBI) for transactional data; PostgreSQL (pgvector) for vector embeddings.
+
+### `avisos-fleet-anomaly-detection-service`
+
+A specialized Python microservice providing predictive anomaly detection for the entire node fleet. Built with **FastAPI** and **scikit-learn**.
+
+Responsibilities:
+- **Telemetry Ingestion** — Receives aggregated fleet metrics (responsive ratio, average battery level, last seen time) from the Java controller via HTTP POST `/fleet-health`.
+- **Anomaly Detection** — Evaluates the incoming metrics using an **Isolation Forest** model to detect multivariate anomalies (e.g., a sudden drop in battery across multiple nodes, or a spike in unresponsiveness).
+- **Callback Syncing** — Sends an `AnomalyReport` back to the Java controller's webhook asynchronously, which then caches the result and broadcasts it to the React dashboard.
+- **Model Training** — Supports standalone training runs using a dedicated `anomaly-detector-training.Dockerfile` which serializes the fitted Isolation Forest model to disk.
 
 ### `avisos-knowledge`
 
@@ -467,6 +481,8 @@ Configuration is loaded from `application.yml` by the custom `ConfigLoader` with
 | Service | Container | Port | Purpose |
 |---|---|---|---|
 | `controller` | avisos-controller | 8083 | Central orchestration (Spring Boot, CLI disabled) |
+| `fleet-anomaly-detection-api` | fleet-anomaly-detection-api | 8000 | Python/FastAPI fleet anomaly detection |
+| `postgres-anomaly-detection-db` | postgres-anomaly-detection-db | 5434→5432 | Dedicated PostgreSQL DB for ML service |
 | `mosquitto` | avisos-broker | 1883 | MQTT message broker |
 | `localstack` | avisos-cloud | 4567→4566 | AWS S3/SNS emulation |
 | `vision-api` | avisos-VisionRequest | 32168 | CodeProject.AI object detection |
