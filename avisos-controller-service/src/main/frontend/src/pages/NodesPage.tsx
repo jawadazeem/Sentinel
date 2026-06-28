@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { useSubscription } from "../hooks/useSubscription";
 import { StatusBadge } from "../components/ui/StatusBadge";
-import type { NodeRecord } from "../types/models";
+import type { NodeRecord, AnomalyReport, FleetMetrics } from "../types/models";
 import { dateTimeMillis, formatDateTime } from "../utils/dateTime";
 import "./NodesPage.css";
 
@@ -10,12 +10,16 @@ const PAGE_SIZE = 20;
 
 export function NodesPage() {
   const [nodes, setNodes] = useState<NodeRecord[]>([]);
+  const [anomalyReport, setAnomalyReport] = useState<AnomalyReport | null>(null);
+  const [fleetMetrics, setFleetMetrics] = useState<FleetMetrics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const nodeUpdate = useSubscription<NodeRecord>("/topic/nodes");
 
   useEffect(() => {
     api.getNodes().then(setNodes).catch((e) => setError(e.message));
+    api.getLatestAnomalyReport().then(setAnomalyReport).catch(() => null);
+    api.getLatestFleetMetrics().then(setFleetMetrics).catch(() => null);
   }, []);
 
   useEffect(() => {
@@ -68,6 +72,31 @@ export function NodesPage() {
           {sortedNodes.length}
         </div>
       </div>
+      
+      {(anomalyReport || fleetMetrics) && (
+        <div style={{ marginBottom: "24px", padding: "16px", backgroundColor: "var(--bg-card)", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
+          <h3 style={{ margin: "0 0 16px 0", fontSize: "1.1em" }}>Fleet Analysis & Metrics</h3>
+          <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+            {anomalyReport && (
+              <div style={{ flex: 1, minWidth: "250px" }}>
+                <h4 style={{ margin: "0 0 8px 0", fontSize: "0.95em", color: "var(--text-secondary)" }}>Latest Anomaly Report</h4>
+                <div style={{ marginBottom: "4px" }}><strong style={{ width: "120px", display: "inline-block", fontSize: "0.9em" }}>Status:</strong> <StatusBadge status={anomalyReport.isAnomaly ? "UNHEALTHY" : "HEALTHY"} /></div>
+                <div style={{ marginBottom: "4px", fontSize: "0.9em" }}><strong style={{ width: "120px", display: "inline-block" }}>Report Time:</strong> {new Date(Number(anomalyReport.timestamp) > 9999999999 ? Number(anomalyReport.timestamp) : Number(anomalyReport.timestamp) * 1000).toLocaleString()}</div>
+                {anomalyReport.diagnosticReason && <div style={{ fontSize: "0.9em" }}><strong style={{ width: "120px", display: "inline-block" }}>Reason:</strong> <span className="red">{anomalyReport.diagnosticReason}</span></div>}
+              </div>
+            )}
+            {fleetMetrics && (
+              <div style={{ flex: 1, minWidth: "250px" }}>
+                <h4 style={{ margin: "0 0 8px 0", fontSize: "0.95em", color: "var(--text-secondary)" }}>Latest Fleet Metrics</h4>
+                <div style={{ marginBottom: "4px", fontSize: "0.9em" }}><strong style={{ width: "180px", display: "inline-block" }}>Nodes Evaluated:</strong> {fleetMetrics.fleetMetrics.totalNodesEvaluated}</div>
+                <div style={{ marginBottom: "4px", fontSize: "0.9em" }}><strong style={{ width: "180px", display: "inline-block" }}>Responsive Ratio:</strong> {(fleetMetrics.fleetMetrics.responsiveRatio * 100).toFixed(1)}%</div>
+                <div style={{ marginBottom: "4px", fontSize: "0.9em" }}><strong style={{ width: "180px", display: "inline-block" }}>Battery &gt; 50% Ratio:</strong> {(fleetMetrics.fleetMetrics.batteryAbove50Ratio * 100).toFixed(1)}%</div>
+                <div style={{ fontSize: "0.9em" }}><strong style={{ width: "180px", display: "inline-block" }}>Avg Last Seen:</strong> {fleetMetrics.fleetMetrics.avgSecondsSinceLastSeen.toFixed(1)}s</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="table-shell">
         <table className="scada-table">

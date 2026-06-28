@@ -11,6 +11,8 @@ import type {
   SystemHealthReport,
   SystemStats,
   VisionEvent,
+  AnomalyReport,
+  FleetMetrics,
 } from "../types/models";
 import "./DashboardPage.css";
 
@@ -20,6 +22,8 @@ export function DashboardPage() {
   const [alarms, setAlarms] = useState<AlarmRecord[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [analyses, setAnalyses] = useState<AlarmAnalysisRecord[]>([]);
+  const [anomalyReport, setAnomalyReport] = useState<AnomalyReport | null>(null);
+  const [fleetMetrics, setFleetMetrics] = useState<FleetMetrics | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const nodeUpdate = useSubscription<NodeRecord>("/topic/nodes");
@@ -28,13 +32,23 @@ export function DashboardPage() {
   const analysisUpdate = useSubscription<AlarmAnalysisRecord>("/topic/alarm");
 
   useEffect(() => {
-    Promise.all([api.getHealth(), api.getNodes(), api.getAlarms(), api.getStats(), api.getAnalyses()])
-      .then(([h, n, a, s, an]) => {
+    Promise.all([
+      api.getHealth(),
+      api.getNodes(),
+      api.getAlarms(),
+      api.getStats(),
+      api.getAnalyses(),
+      api.getLatestAnomalyReport().catch(() => null),
+      api.getLatestFleetMetrics().catch(() => null),
+    ])
+      .then(([h, n, a, s, an, ar, fm]) => {
         setHealth(h);
         setNodes(n);
         setAlarms(a);
         setStats(s);
         setAnalyses(an);
+        setAnomalyReport(ar);
+        setFleetMetrics(fm);
       })
       .catch((e) => setError(e.message));
   }, []);
@@ -110,6 +124,35 @@ export function DashboardPage() {
               <span className="stat-value">{nodes.length}</span>
               <span className="stat-label">Total</span>
             </div>
+          </div>
+          
+          <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--border-color)" }}>
+            <h4 style={{ margin: "0 0 12px 0", color: "var(--text-secondary)", fontSize: "0.9em", textTransform: "uppercase" }}>Fleet Analysis</h4>
+            {anomalyReport ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: "0.9em" }}>Anomaly Status:</span>
+                <span className={anomalyReport.isAnomaly ? "red" : "green"} style={{ fontWeight: 600, fontSize: "0.9em" }}>
+                  {anomalyReport.isAnomaly ? "DETECTED" : "NORMAL"}
+                </span>
+              </div>
+            ) : <div style={{ fontSize: "0.9em", color: "var(--text-muted)" }}>No anomaly report</div>}
+            
+            {fleetMetrics ? (
+              <div style={{ fontSize: '0.85em', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Avg Battery &gt; 50%:</span>
+                  <span>{(fleetMetrics.fleetMetrics.batteryAbove50Ratio * 100).toFixed(0)}%</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Responsive Ratio:</span>
+                  <span>{(fleetMetrics.fleetMetrics.responsiveRatio * 100).toFixed(0)}%</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Evaluated Nodes:</span>
+                  <span>{fleetMetrics.fleetMetrics.totalNodesEvaluated}</span>
+                </div>
+              </div>
+            ) : null}
           </div>
         </DataCard>
 

@@ -21,7 +21,7 @@ services:
             - AVISOS_AWS_ACCESS_KEY_ID=test
             - AVISOS_AWS_SECRET_ACCESS_KEY=test
             - AVISOS_AI_RAG_KNOWLEDGE_BASE_DIR=/app/avisos-knowledge
-            - SPRING_AI_OLLAMA_BASE_URL=http://avisos-ollama:11434
+            - SPRING_AI_OLLAMA_BASE_URL=http://host.docker.internal:11434
             - SPRING_DATASOURCE_URL=jdbc:postgresql://avisos-pgvector:5432/avisos_vectors
             - SPRING_DATASOURCE_USERNAME=avisos
             - SPRING_DATASOURCE_PASSWORD=avisos
@@ -33,9 +33,10 @@ services:
             - mosquitto
             - vision-api
             - localstack
-            - ollama
             - pgvector
         restart: unless-stopped
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
 
     mosquitto:
         image: eclipse-mosquitto:latest
@@ -77,18 +78,6 @@ services:
             - "32168:32168"
         environment:
             - VISION-DETECTION=True
-
-    ollama:
-        image: ollama/ollama:latest
-        container_name: avisos-ollama
-        networks:
-            - avisos-net
-        ports:
-            - "11434:11434"
-        volumes:
-            - ollama-data:/root/.ollama
-        restart: unless-stopped
-
     pgvector:
         image: pgvector/pgvector:pg17
         container_name: avisos-pgvector
@@ -103,10 +92,49 @@ services:
         volumes:
             - pgvector-data:/var/lib/postgresql/data
         restart: unless-stopped
+    fleet-anomaly-detection-trainer:
+        build:
+            context: ./avisos-fleet-anomaly-detection-service
+            dockerfile: anomaly-detector-training.Dockerfile
+        volumes:
+            - model_data:/app/ml_model
+            - ./avisos-fleet-anomaly-detection-service/data:/app/data
+    fleet-anomaly-detection-api:
+        build:
+            context: ./avisos-fleet-anomaly-detection-service
+            dockerfile: anomaly-detector.Dockerfile
+        container_name: fleet-anomaly-detection-api
+        ports:
+            - "8000:8000"
+        depends_on:
+            - postgres
+        environment:
+            DATABASE_URL: postgresql+psycopg2://avisos:avisos@postgres:5432/avisos_anomaly_detection
+        volumes:
+            - model_data:/app/ml_model:ro
+            - ./avisos-fleet-anomaly-detection-service/data:/app/data
+        networks:
+            - avisos-net
+    postgres:
+        image: postgres:16-alpine
+        container_name: postgres-anomaly-detection-db
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: avisos_anomaly_detection
+            POSTGRES_USER: avisos
+            POSTGRES_PASSWORD: avisos
+        networks:
+            - avisos-net
+        ports:
+            - "5434:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
 
 volumes:
     ollama-data:
     pgvector-data:
+    postgres_data:
+    model_data:
 
 networks:
     avisos-net:

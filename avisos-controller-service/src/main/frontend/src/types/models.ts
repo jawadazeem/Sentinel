@@ -86,3 +86,25 @@ export interface AlarmAnalysisRecord {
   promptVersion: string;
   createdAt: ApiDateTime;
 }
+
+export interface AnomalyReport {
+  id: number;
+  timestamp: string;
+  isAnomaly: boolean;
+  diagnosticReason: string | null;
+  rawPayload: {
+    totalNodesEvaluated: number,
+    responsiveRatio: number,
+    batteryAbove50Ratio: number,
+    avgSecondsSinceLastSeen: number
+  }
+}
+export interface FleetMetrics {
+  timestamp: string;
+  fleetMetrics: {
+    totalNodesEvaluated: number,
+    responsiveRatio: number,
+    batteryAbove50Ratio: number,
+    avgSecondsSinceLastSeen: number
+  }
+}

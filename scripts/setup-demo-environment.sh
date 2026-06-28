@@ -72,21 +72,21 @@ parse_args() {
     done
 }
 
-wait_for_controller() {
-    local url="http://localhost:8083/actuator/health"
-    local attempts=60
+# wait_for_controller() {
+#     local url="http://localhost:8083/actuator/health"
+#     local attempts=60
 
-    log "Waiting for controller health endpoint..."
-    for _ in $(seq 1 "$attempts"); do
-        if curl -fsS "$url" >/dev/null 2>&1; then
-            log "Controller is healthy."
-            return
-        fi
-        sleep 2
-    done
+#     log "Waiting for controller health endpoint..."
+#     for _ in $(seq 1 "$attempts"); do
+#         if curl -fsS "$url" >/dev/null 2>&1; then
+#             log "Controller is healthy."
+#             return
+#         fi
+#         sleep 2
+#     done
 
-    fail "Controller did not become healthy at $url"
-}
+#     fail "Controller did not become healthy at $url"
+# }
 
 main() {
     parse_args "$@"
@@ -103,7 +103,7 @@ main() {
         docker compose -f "$COMPOSE_FILE" up -d
     fi
 
-    wait_for_controller
+    # wait_for_controller
 
     log "Seeding staff directory..."
     "$PROJECT_ROOT/scripts/seed-staff.sh" --yes

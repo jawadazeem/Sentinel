@@ -15,20 +15,6 @@ jobs:
         run: |
           test -f .env.example
 
-      - name: Teardown simulation
+      - name: Build and set up demo environment
         run: |
-          ./scripts/spawn-test-fleet.sh teardown
-
-      - name: Build and deploy
-        run: |
-          docker compose --env-file .env.example down --remove-orphans
-          docker compose --env-file .env.example up --build -d
-          docker system prune -f
-
-      - name: Build simulated fleet images
-        run: |
-          ./scripts/spawn-test-fleet.sh build
-
-      - name: Create simulated nodes
-        run: |
-          ./scripts/spawn-test-fleet.sh
+          ./scripts/setup-demo-environment.sh

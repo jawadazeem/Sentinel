@@ -48,6 +48,8 @@ mosquitto/log
 data
 .env
 /.idea/
+avisos-fleet-anomaly-detection-service/data/
+*.joblib
 
 ### Frontend (React build artifacts) ###
 avisos-controller-service/src/main/frontend/node_modules/
@@ -56,3 +58,23 @@ avisos-controller-service/src/main/resources/static/
 
 ### C++ Build Artifacts ###
 avisos-hardware-simulator/build
+
+### Python ###
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.egg-info/
+.eggs/
+.python-version
+venv/
+env/
+.venv/
+pip-wheel-metadata/
+htmlcov/
+.tox/
+.pytest_cache/
+.mypy_cache/
+.pytype/
+

@@ -7,6 +7,7 @@ package com.azeem.avisos.controller.config;
 
 import com.azeem.avisos.controller.repository.AlarmAnalysisRepository;
 import com.azeem.avisos.controller.repository.AlarmRepository;
+import com.azeem.avisos.controller.repository.NodeFleetMetricRepository;
 import com.azeem.avisos.controller.repository.NodeRepository;
 import com.azeem.avisos.controller.repository.StaffRepository;
 import com.azeem.avisos.controller.repository.TelemetryRepository;
@@ -49,6 +50,13 @@ public class JdbiConfiguration {
     if (repo.countColumn("s3_image_key") == 0) {
       repo.addS3ImageKeyColumn();
     }
+    return repo;
+  }
+
+  @Bean
+  public NodeFleetMetricRepository nodeFleetMetricRepository(Jdbi jdbi) {
+    NodeFleetMetricRepository repo = jdbi.onDemand(NodeFleetMetricRepository.class);
+    repo.initNodeFleetMetricTable();
     return repo;
   }
 
