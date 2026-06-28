@@ -6,6 +6,8 @@ import type {
   SystemHealthReport,
   SystemStats,
   SystemAbout,
+  AnomalyReport,
+  FleetMetrics,
 } from "../types/models";
 
 const BASE = "";
@@ -16,7 +18,8 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
     const body = await res.text();
     throw new Error(`${res.status}: ${body}`);
   }
-  return res.json();
+  const text = await res.text();
+  return text ? JSON.parse(text) : (undefined as unknown as T);
 }
 
 export const api = {
@@ -38,4 +41,6 @@ export const api = {
   getStats: () => fetchJson<SystemStats>("/api/system/stats"),
   getAbout: () => fetchJson<SystemAbout>("/api/system/about"),
   getAlarmImageUrl: (alarmId: string) => `${BASE}/api/alarms/${encodeURIComponent(alarmId)}/image`,
+  getLatestAnomalyReport: () => fetchJson<AnomalyReport>("/api/fleet-metrics/anomaly-report/latest"),
+  getLatestFleetMetrics: () => fetchJson<FleetMetrics>("/api/fleet-metrics/metrics/latest"),
 };

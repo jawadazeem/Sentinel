@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timezone
 
 # DTOs
 class FleetMetrics(BaseModel):
@@ -12,11 +12,22 @@ class FleetMetrics(BaseModel):
 
 class FleetMetricRecord(BaseModel):
     timestamp: datetime
-    fleet_metrics: FleetMetrics
+    fleet_metrics: FleetMetrics = Field(alias="fleetMetrics")
+
+    model_config = {"populate_by_name": True}
 
 class FleetAnomalyReport(BaseModel):
     id: int
     timestamp: datetime
-    is_anomaly: bool
-    diagnostic_reason: str | None
-    raw_payload: FleetMetrics
+    is_anomaly: bool = Field(alias="isAnomaly")
+    diagnostic_reason: str | None = Field(alias="diagnosticReason")
+    raw_payload: FleetMetrics = Field(alias="rawPayload")
+
+    model_config = {"populate_by_name": True}
+
+    def to_json(self):
+        data = self.model_dump(mode='json', by_alias=True)
+        # Force the timestamp to UTC and append 'Z'
+        if isinstance(self.timestamp, datetime):
+            data['timestamp'] = self.timestamp.replace(tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
+        return data

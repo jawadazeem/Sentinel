@@ -28,4 +28,6 @@ class TrainingService:
         predictions = clf.predict(X)
         path = Path("ml_model/fleet_isolation_forest.joblib")
         joblib.dump(clf, path)
+        
+        print("Successfully trained and dumped ML model")
         return path

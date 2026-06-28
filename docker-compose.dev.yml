@@ -92,6 +92,29 @@ services:
         volumes:
             - pgvector-data:/var/lib/postgresql/data
         restart: unless-stopped
+    fleet-anomaly-detection-trainer:
+        build:
+            context: ./avisos-fleet-anomaly-detection-service
+            dockerfile: anomaly-detector-training.Dockerfile
+        volumes:
+            - model_data:/app/ml_model
+            - ./avisos-fleet-anomaly-detection-service/data:/app/data
+    fleet-anomaly-detection-api:
+        build:
+            context: ./avisos-fleet-anomaly-detection-service
+            dockerfile: anomaly-detector.Dockerfile
+        container_name: fleet-anomaly-detection-api
+        ports:
+            - "8000:8000"
+        depends_on:
+            - postgres
+        environment:
+            DATABASE_URL: postgresql+psycopg2://avisos:avisos@postgres:5432/avisos_anomaly_detection
+        volumes:
+            - model_data:/app/ml_model:ro
+            - ./avisos-fleet-anomaly-detection-service/data:/app/data
+        networks:
+            - avisos-net
     postgres:
         image: postgres:16-alpine
         container_name: postgres-anomaly-detection-db
@@ -111,6 +134,7 @@ volumes:
     ollama-data:
     pgvector-data:
     postgres_data:
+    model_data:
 
 networks:
     avisos-net:

@@ -5,6 +5,7 @@
 
 package com.azeem.avisos.controller.service.node;
 
+import com.azeem.avisos.controller.model.node.FleetAnomalyReport;
 import com.azeem.avisos.controller.model.node.FleetMetricRecord;
 import com.azeem.avisos.controller.model.node.FleetMetrics;
 import com.azeem.avisos.controller.model.node.NodeRecord;
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -23,15 +25,25 @@ public class FleetMetricService {
 
   private final NodeFleetMetricRepository repository;
   private final NodeService nodeService;
+  private AtomicReference<FleetAnomalyReport> latestFleetAnomalyReport = new AtomicReference<>();
 
   public FleetMetricService(NodeFleetMetricRepository repository, NodeService nodeService) {
     this.repository = repository;
     this.nodeService = nodeService;
   }
 
+  public void updateAnomalyReport(FleetAnomalyReport report) {
+    latestFleetAnomalyReport.set(report);
+  }
+
+  /** latestFleetAnomalyReport only holds the latest, most up to date, report */
+  public Optional<FleetAnomalyReport> getLatestAnomalyReport() {
+    return Optional.ofNullable(latestFleetAnomalyReport.get());
+  }
+
   // Compute node fleet health metrics every minute
   @Scheduled(fixedRate = 60000)
-  public void generateLatestMetric() {
+  public void generateLatestMetrics() {
     Instant now = Instant.now();
 
     List<NodeRecord> nodes =
@@ -60,7 +72,7 @@ public class FleetMetricService {
     return repository.getMetrics(limit);
   }
 
-  public Optional<FleetMetricRecord> getLatestMetric() {
+  public Optional<FleetMetricRecord> getLatestMetrics() {
     return repository.getLatestMetric();
   }
 
