@@ -25,7 +25,7 @@
                 server.Get("/readings", [this](const httplib::Request&, httplib::Response& res) {
                     spdlog::info("Called /readings");
                     
-                    telemetry_provider_.inspectSnapshot([&res](const Snapshot& snapshot) {
+                    telemetry_provider_.inspectSnapshot([&res](const hardware_interface::Snapshot& snapshot) {
                         nlohmann::json j;
                         j["battery_percent"] = snapshot.battery_percent_;
                         j["temperature_celsius"] = snapshot.temperature_celsius_;
