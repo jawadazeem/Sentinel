@@ -8,6 +8,10 @@
 
 namespace avisos {
     namespace hardware_interface {
+        OpenCVFrameProvider::OpenCVFrameProvider(int camera_index) 
+            : camera_index_(camera_index) {
+        }
+
         void OpenCVFrameProvider::startStreaming() {
             video_capture_.open(camera_index_, cv::CAP_V4L2);
         }
