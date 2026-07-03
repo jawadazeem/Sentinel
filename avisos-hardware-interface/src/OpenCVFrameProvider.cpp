@@ -40,7 +40,7 @@ namespace avisos {
             );
         }
 
-        const bool OpenCVFrameProvider::getFirstFrameLoaded() {
+        bool OpenCVFrameProvider::getFirstFrameLoaded() {
             return is_first_frame_loaded_;
         }
     }
